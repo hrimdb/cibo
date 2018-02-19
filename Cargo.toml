@@ -1,0 +1,7 @@
+[package]
+name = "cibo"
+version = "0.1.0"
+authors = ["hawkingrei <hawking.rei@gmail.com>"]
+
+[dependencies]
+clippy = { version = "*", optional = true }
