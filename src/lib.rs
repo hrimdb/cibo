@@ -1,5 +1,9 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#[macro_use]
+pub mod maptable;
+extern crate crossbeam_epoch as epoch;
+extern crate crossbeam_utils as utils;
 #[cfg(test)]
 mod tests {
     #[test]

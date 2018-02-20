@@ -5,3 +5,8 @@ authors = ["hawkingrei <hawking.rei@gmail.com>"]
 
 [dependencies]
 clippy = { version = "*", optional = true }
+crossbeam-epoch = "0.4.0"
+crossbeam-utils = "0.2.2"
+
+[dev-dependencies]
+rand = "0.4"
