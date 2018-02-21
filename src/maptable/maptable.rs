@@ -177,7 +177,7 @@ pub struct MappingTable<T> {
 
 unsafe impl<T: Send> Send for MappingTable<T> {}
 
-impl<T: Default> MappingTable<T> {
+impl<T: Default + PartialEq + Copy> MappingTable<T> {
     pub fn new() -> MappingTable<T> {
         MappingTable {
             inner: Arc::new(CachePadded::new(Inner::new())),
@@ -248,7 +248,17 @@ impl<T: Default> MappingTable<T> {
             None
         } else {
             let value = unsafe { Some(buf.deref().read(key)) };
-            value
+            match value {
+                // The division was valid
+                Some(x) => {
+                    if x == Default::default() {
+                        return None;
+                    }
+                    return value;
+                }
+                // The division was invalid
+                None => return None,
+            }
         }
     }
 
@@ -300,5 +310,7 @@ mod tests {
         assert_eq!(d.len(), 0);
         d.set(1, 1);
         assert_eq!(d.get(1), Some(1));
+        d.remove(1);
+        assert_eq!(d.get(1), None);
     }
 }
