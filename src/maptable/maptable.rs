@@ -11,7 +11,7 @@ use std::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst};
 
 use epoch::{Atomic, Owned};
 use utils::cache_padded::CachePadded;
-/// Minimum buffer capacity for a deque.
+/// Minimum buffer capacity for a MappingTable.
 const DEFAULT_MIN_CAP: usize = 16;
 
 /// If a buffer of at least this size is retired, thread-local garbage is flushed so that it gets
@@ -21,7 +21,7 @@ const FLUSH_THRESHOLD_BYTES: usize = 1 << 10;
 /// Possible outcomes of a steal operation.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Steal<T> {
-    /// The deque was empty at the time of stealing.
+    /// The MappingTable was empty at the time of stealing.
     Empty,
 
     /// Some data has been successfully stolen.
@@ -31,7 +31,7 @@ pub enum Steal<T> {
     Retry,
 }
 
-/// A buffer that holds elements in a deque.
+/// A buffer that holds elements in a MappingTable.
 struct Buffer<T> {
     /// Pointer to the allocated memory.
     ptr: *mut T,
@@ -79,7 +79,7 @@ impl<T> Drop for Buffer<T> {
     }
 }
 
-/// Internal data that is shared between the deque and its stealers.
+/// Internal data that is shared between the MappingTable and its stealers.
 struct Inner<T> {
     /// The bottom index.
     bottom: AtomicIsize,
@@ -157,7 +157,7 @@ impl<T> Drop for Inner<T> {
         unsafe {
             let buffer = self.buffer.load(Relaxed, epoch::unprotected());
 
-            // Go through the buffer from top to bottom and drop all elements in the deque.
+            // Go through the buffer from top to bottom and drop all elements in the MappingTable.
             let mut i = t;
             while i != b {
                 ptr::drop_in_place(buffer.deref().at(i));
@@ -170,23 +170,23 @@ impl<T> Drop for Inner<T> {
     }
 }
 
-pub struct Deque<T> {
+pub struct MappingTable<T> {
     inner: Arc<CachePadded<Inner<T>>>,
     _marker: PhantomData<*mut ()>, // !Send + !Sync
 }
 
-unsafe impl<T: Send> Send for Deque<T> {}
+unsafe impl<T: Send> Send for MappingTable<T> {}
 
-impl<T: Default> Deque<T> {
-    pub fn new() -> Deque<T> {
-        Deque {
+impl<T: Default> MappingTable<T> {
+    pub fn new() -> MappingTable<T> {
+        MappingTable {
             inner: Arc::new(CachePadded::new(Inner::new())),
             _marker: PhantomData,
         }
     }
 
-    pub fn with_min_capacity(min_cap: usize) -> Deque<T> {
-        Deque {
+    pub fn with_min_capacity(min_cap: usize) -> MappingTable<T> {
+        MappingTable {
             inner: Arc::new(CachePadded::new(Inner::with_min_capacity(min_cap))),
             _marker: PhantomData,
         }
@@ -206,10 +206,10 @@ impl<T: Default> Deque<T> {
         unsafe {
             let mut buffer = self.inner.buffer.load(Relaxed, epoch::unprotected());
 
-            // Calculate the length of the deque.
+            // Calculate the length of the MappingTable.
             let len = b.wrapping_sub(t);
 
-            // Is the deque full?
+            // Is the MappingTable full?
             let cap = buffer.deref().cap;
             if len >= cap as isize {
                 // Yes. Grow the underlying buffer.
@@ -227,7 +227,7 @@ impl<T: Default> Deque<T> {
         // Load the bottom.
         let b = self.inner.bottom.load(Relaxed);
 
-        // If the deque is empty, return early without incurring the cost of a SeqCst fence.
+        // If the MappingTable is empty, return early without incurring the cost of a SeqCst fence.
         let t = self.inner.top.load(Relaxed);
         if b.wrapping_sub(t) <= 0 {
             return None;
@@ -277,5 +277,28 @@ impl<T: Default> Deque<T> {
             }
             true
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate rand;
+
+    use std::sync::{Arc, Mutex};
+    use std::sync::atomic::{AtomicBool, AtomicUsize};
+    use std::sync::atomic::Ordering::SeqCst;
+    use std::thread;
+
+    use epoch;
+    use self::rand::Rng;
+
+    use super::MappingTable;
+
+    #[test]
+    fn smoke() {
+        let d = MappingTable::<isize>::new();
+        assert_eq!(d.len(), 0);
+        d.set(1, 1);
+        assert_eq!(d.get(1), Some(1));
     }
 }
