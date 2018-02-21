@@ -177,7 +177,7 @@ pub struct Deque<T> {
 
 unsafe impl<T: Send> Send for Deque<T> {}
 
-impl<T> Deque<T> {
+impl<T: Default> Deque<T> {
     pub fn new() -> Deque<T> {
         Deque {
             inner: Arc::new(CachePadded::new(Inner::new())),
@@ -247,8 +247,35 @@ impl<T> Deque<T> {
         if len <= 0 {
             None
         } else {
-            let value = unsafe { Some(buf.deref().read(b)) };
+            let value = unsafe { Some(buf.deref().read(key)) };
             value
+        }
+    }
+
+    pub fn remove(&self, key: isize) -> bool {
+        let b = self.inner.bottom.load(Relaxed);
+
+        let t = self.inner.top.load(Relaxed);
+        if b.wrapping_sub(t) <= 0 {
+            return false;
+        }
+
+        let buf = unsafe { self.inner.buffer.load(Relaxed, epoch::unprotected()) };
+
+        atomic::fence(SeqCst);
+        // Load the top.
+        let t = self.inner.top.load(Relaxed);
+
+        // Compute the length after the bottom was decremented.
+        let len = b.wrapping_sub(t);
+
+        if len <= 0 {
+            return false;
+        } else {
+            unsafe {
+                buf.deref().write(key, Default::default());
+            }
+            true
         }
     }
 }
