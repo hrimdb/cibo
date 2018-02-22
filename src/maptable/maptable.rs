@@ -1,7 +1,9 @@
+extern crate crossbeam_deque;
 extern crate crossbeam_epoch as epoch;
 extern crate crossbeam_utils as utils;
 
 use std::fmt;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
@@ -10,6 +12,7 @@ use std::sync::atomic::{self, AtomicIsize};
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst};
 
 use epoch::{Atomic, Owned};
+use crossbeam_deque::Deque;
 use utils::cache_padded::CachePadded;
 /// Minimum buffer capacity for a MappingTable.
 const DEFAULT_MIN_CAP: usize = 16;
@@ -177,7 +180,7 @@ pub struct MappingTable<T> {
 
 unsafe impl<T: Send> Send for MappingTable<T> {}
 
-impl<T: Default + PartialEq + Copy> MappingTable<T> {
+impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
     pub fn new() -> MappingTable<T> {
         MappingTable {
             inner: Arc::new(CachePadded::new(Inner::new())),
@@ -199,6 +202,7 @@ impl<T: Default + PartialEq + Copy> MappingTable<T> {
     }
 
     pub fn set(&self, key: isize, value: T) {
+        debug_assert_ne!(value, Default::default());
         // Load the bottom, top, and buffer. The buffer doesn't have to be epoch-protected
         // because the current thread (the worker) is the only one that grows and shrinks it.
         let b = self.inner.bottom.load(Relaxed);
@@ -287,6 +291,42 @@ impl<T: Default + PartialEq + Copy> MappingTable<T> {
             }
             true
         }
+    }
+}
+
+pub struct PageMap {
+    inner: MappingTable<u64>,
+    empty: Deque<isize>,
+    _marker: PhantomData<*mut ()>, // !Send + !Sync
+}
+
+impl PageMap {
+    pub fn new() -> PageMap {
+        PageMap {
+            inner: MappingTable::new(),
+            empty: Deque::new(),
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn get(&self, key: isize) -> Option<u64> {
+        return self.inner.get(key);
+    }
+
+    pub fn set(&self, key: isize, value: u64) {
+        self.inner.set(key, value)
+    }
+
+    pub fn remove(&self, key: isize) -> bool {
+        if self.inner.remove(key) {
+            self.empty.push(key);
+            return true;
+        }
+        return false;
+    }
+
+    pub fn len(&self) -> usize {
+        return self.inner.len();
     }
 }
 

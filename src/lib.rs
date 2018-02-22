@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #[macro_use]
 pub mod maptable;
+extern crate crossbeam_deque;
 extern crate crossbeam_epoch as epoch;
 extern crate crossbeam_utils as utils;
 #[cfg(test)]
