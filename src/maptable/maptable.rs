@@ -21,19 +21,6 @@ const DEFAULT_MIN_CAP: usize = 16;
 /// deallocated as soon as possible.
 const FLUSH_THRESHOLD_BYTES: usize = 1 << 10;
 
-/// Possible outcomes of a steal operation.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-pub enum Steal<T> {
-    /// The MappingTable was empty at the time of stealing.
-    Empty,
-
-    /// Some data has been successfully stolen.
-    Data(T),
-
-    /// Lost the race for stealing data to another concurrent operation. Try again.
-    Retry,
-}
-
 /// A buffer that holds elements in a MappingTable.
 struct Buffer<T> {
     /// Pointer to the allocated memory.
