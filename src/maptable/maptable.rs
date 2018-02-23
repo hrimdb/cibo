@@ -321,14 +321,6 @@ impl PageMap {
 mod tests {
     extern crate rand;
 
-    use std::sync::{Arc, Mutex};
-    use std::sync::atomic::{AtomicBool, AtomicUsize};
-    use std::sync::atomic::Ordering::SeqCst;
-    use std::thread;
-
-    use epoch;
-    use self::rand::Rng;
-
     use super::MappingTable;
 
     #[test]
@@ -339,5 +331,6 @@ mod tests {
         assert_eq!(d.get(1), Some(1));
         d.remove(1);
         assert_eq!(d.get(1), None);
+        assert_eq!(d.get(100), None);
     }
 }
