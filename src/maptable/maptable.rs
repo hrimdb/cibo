@@ -15,7 +15,7 @@ use epoch::{Atomic, Owned};
 use crossbeam_deque::Deque;
 use utils::cache_padded::CachePadded;
 /// Minimum buffer capacity for a MappingTable.
-const DEFAULT_MIN_CAP: usize = 16;
+const DEFAULT_MIN_CAP: usize = 2;
 
 /// If a buffer of at least this size is retired, thread-local garbage is flushed so that it gets
 /// deallocated as soon as possible.
@@ -214,6 +214,34 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
         }
     }
 
+    pub fn push(&self, value: T) -> Option<isize> {
+        unsafe {
+            // Load the bottom, top, and buffer. The buffer doesn't have to be epoch-protected
+            // because the current thread (the worker) is the only one that grows and shrinks it.
+            let b = self.inner.bottom.load(Relaxed);
+            let t = self.inner.top.load(Acquire);
+
+            let mut buffer = self.inner.buffer.load(Relaxed, epoch::unprotected());
+
+            // Calculate the length of the deque.
+            let len = b.wrapping_sub(t);
+
+            // Is the deque full?
+            let cap = buffer.deref().cap;
+            if len >= cap as isize {
+                // Yes. Grow the underlying buffer.
+                self.inner.resize(2 * cap);
+                buffer = self.inner.buffer.load(Relaxed, epoch::unprotected());
+            }
+
+            // Write `value` into the right slot and increment `b`.
+            buffer.deref().write(b, value);
+            atomic::fence(Release);
+            self.inner.bottom.store(b.wrapping_add(1), Relaxed);
+            return Some(b);
+        }
+    }
+
     pub fn get(&self, key: isize) -> Option<T> {
         // Load the bottom.
         let b = self.inner.bottom.load(Relaxed);
@@ -221,6 +249,10 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
         // If the MappingTable is empty, return early without incurring the cost of a SeqCst fence.
         let t = self.inner.top.load(Relaxed);
         if b.wrapping_sub(t) <= 0 {
+            return None;
+        }
+
+        if b < key {
             return None;
         }
 
@@ -300,8 +332,12 @@ impl PageMap {
         return self.inner.get(key);
     }
 
-    pub fn set(&self, key: isize, value: u64) {
-        self.inner.set(key, value)
+    pub fn set(&self, key: isize, value: u64) -> bool {
+        if self.inner.get(key) != None {
+            self.inner.set(key, value);
+            return true;
+        }
+        return false;
     }
 
     pub fn remove(&self, key: isize) -> bool {
@@ -315,22 +351,36 @@ impl PageMap {
     pub fn len(&self) -> usize {
         return self.inner.len();
     }
+
+    pub fn allocate(&self, value: u64) -> Option<isize> {
+        if self.empty.len() != 0 {
+            match self.empty.pop() {
+                Some(key) => {
+                    self.inner.set(key, value);
+                    return Some(key);
+                }
+                // The division was invalid
+                None => return None,
+            }
+        }
+        return self.inner.push(value);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     extern crate rand;
 
-    use super::MappingTable;
+    use super::PageMap;
 
     #[test]
     fn smoke() {
-        let d = MappingTable::<isize>::new();
-        assert_eq!(d.len(), 0);
-        d.set(1, 1);
-        assert_eq!(d.get(1), Some(1));
-        d.remove(1);
+        let d = PageMap::new();
+        assert_eq!(d.allocate(1), Some(0));
+        assert_eq!(d.allocate(2), Some(1));
+        assert_eq!(d.remove(1), true);
         assert_eq!(d.get(1), None);
+        assert_eq!(d.get(3), None);
         assert_eq!(d.get(100), None);
     }
 }
