@@ -162,6 +162,7 @@ impl<T> Drop for Inner<T> {
 
 pub struct MappingTable<T> {
     inner: Arc<CachePadded<Inner<T>>>,
+    empty: Deque<isize>,
     _marker: PhantomData<*mut ()>, // !Send + !Sync
 }
 
@@ -171,6 +172,7 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
     pub fn new() -> MappingTable<T> {
         MappingTable {
             inner: Arc::new(CachePadded::new(Inner::new())),
+            empty: Deque::new(),
             _marker: PhantomData,
         }
     }
@@ -178,6 +180,7 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
     pub fn with_min_capacity(min_cap: usize) -> MappingTable<T> {
         MappingTable {
             inner: Arc::new(CachePadded::new(Inner::with_min_capacity(min_cap))),
+            empty: Deque::new(),
             _marker: PhantomData,
         }
     }
@@ -215,6 +218,7 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
     }
 
     pub fn push(&self, value: T) -> Option<isize> {
+        debug_assert_ne!(value, Default::default());
         unsafe {
             // Load the bottom, top, and buffer. The buffer doesn't have to be epoch-protected
             // because the current thread (the worker) is the only one that grows and shrinks it.
@@ -311,59 +315,20 @@ impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
             true
         }
     }
-}
 
-pub struct PageMap {
-    inner: MappingTable<u64>,
-    empty: Deque<isize>,
-    _marker: PhantomData<*mut ()>, // !Send + !Sync
-}
-
-impl PageMap {
-    pub fn new() -> PageMap {
-        PageMap {
-            inner: MappingTable::new(),
-            empty: Deque::new(),
-            _marker: PhantomData,
-        }
-    }
-
-    pub fn get(&self, key: isize) -> Option<u64> {
-        return self.inner.get(key);
-    }
-
-    pub fn set(&self, key: isize, value: u64) -> bool {
-        if self.inner.get(key) != None {
-            self.inner.set(key, value);
-            return true;
-        }
-        return false;
-    }
-
-    pub fn remove(&self, key: isize) -> bool {
-        if self.inner.remove(key) {
-            self.empty.push(key);
-            return true;
-        }
-        return false;
-    }
-
-    pub fn len(&self) -> usize {
-        return self.inner.len();
-    }
-
-    pub fn allocate(&self, value: u64) -> Option<isize> {
+    pub fn allocate(&self, value: T) -> Option<isize> {
+        atomic::fence(SeqCst);
         if self.empty.len() != 0 {
             match self.empty.pop() {
                 Some(key) => {
-                    self.inner.set(key, value);
+                    self.set(key, value);
                     return Some(key);
                 }
                 // The division was invalid
                 None => return None,
             }
         }
-        return self.inner.push(value);
+        return self.push(value);
     }
 }
 
@@ -371,11 +336,11 @@ impl PageMap {
 mod tests {
     extern crate rand;
 
-    use super::PageMap;
+    use super::MappingTable;
 
     #[test]
     fn smoke() {
-        let d = PageMap::new();
+        let d = MappingTable::<u64>::new();
         assert_eq!(d.allocate(1), Some(0));
         assert_eq!(d.allocate(2), Some(1));
         assert_eq!(d.remove(1), true);
