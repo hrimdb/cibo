@@ -168,6 +168,7 @@ pub struct MappingTable<T> {
 
 unsafe impl<T: Send> Send for MappingTable<T> {}
 
+#[allow(dead_code)]
 impl<T: Default + PartialEq + Copy + Debug> MappingTable<T> {
     pub fn new() -> MappingTable<T> {
         MappingTable {
