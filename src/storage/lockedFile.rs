@@ -6,7 +6,7 @@ struct lockedfile {
 }
 
 fn lock_file_name(dbname: String) -> String {
-    dbname + "/LOCK"
+    dbname + "/LOC"
 }
 
 fn LockFile(fname: String) {
