@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::fs::{self, DirBuilder};
 
 struct lockedfile {
     file: File,
@@ -8,7 +9,9 @@ fn lock_file_name(dbname: String) -> String {
     dbname + "/LOCK"
 }
 
-fn LockFile(fname: String) {}
+fn LockFile(fname: String) {
+    DirBuilder::new().recursive(true).create(fname).unwrap();
+}
 
 //#[repr(C)]
 //pub struct MY_FILE {
