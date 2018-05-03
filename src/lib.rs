@@ -5,6 +5,7 @@
 #[macro_use]
 pub mod maptable;
 pub mod util;
+pub mod env;
 extern crate alloc;
 extern crate crossbeam_deque;
 extern crate crossbeam_epoch as epoch;

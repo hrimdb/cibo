@@ -13,12 +13,12 @@ pub enum Code {
 }
 
 #[derive(Debug, Clone)]
-struct State {
+pub struct State {
     state_: Vec<u8>,
 }
 
 impl State {
-    fn new(code: Code, msg1: String, msg2: String) -> State {
+    pub fn new(code: Code, msg1: String, msg2: String) -> State {
         let msg = format!("{}: {}", msg1, msg2);
         let size = mem::size_of_val(&msg);
         let mut state: Vec<u8> = Vec::with_capacity(size + 5);
@@ -28,19 +28,19 @@ impl State {
         State { state_: state }
     }
 
-    fn ok() -> State {
+    pub fn ok() -> State {
         State::new(Code::KOk, "".to_string(), "".to_string())
     }
 
-    fn not_supported() -> State {
+    pub fn not_supported() -> State {
         State::new(Code::KNotSupported, "".to_string(), "".to_string())
     }
 
-    fn is_ok(&self) -> bool {
+    pub fn is_ok(&self) -> bool {
         self.state_[4] as u8 == Code::KOk as u8
     }
 
-    fn to_string<'a>(s: &'a State) -> &'a str {
+    pub fn to_string<'a>(s: &'a State) -> &'a str {
         str::from_utf8(&s.state_[5..]).unwrap()
     }
 }
