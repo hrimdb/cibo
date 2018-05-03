@@ -7,9 +7,9 @@ use std::ptr;
 use std::slice;
 use std::usize;
 use env;
-use env::env::k_default_page_size;
+use env::k_default_page_size;
 use util::status::{Code,State};
-use env::env::{SequentialFile,WritableFile};
+use env::{SequentialFile,WritableFile};
 
 pub fn clearerr(stream: *mut libc::FILE) {
     extern "C" {

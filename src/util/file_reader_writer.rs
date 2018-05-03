@@ -1,4 +1,4 @@
-use env::env::{SequentialFile,WritableFile};
+use env::{SequentialFile,WritableFile};
 use libc;
 use std::cmp::min;
 use std::mem;
@@ -6,7 +6,7 @@ use std::ptr;
 use std::sync::atomic::AtomicIsize;
 use util::aligned_buffer::truncate_to_page_boundary;
 use util::aligned_buffer::AlignedBuffer;
-use env::env::EnvOptions;
+use env::EnvOptions;
 use env::io_posix;
 use util::status::State;
 use util::status::Code;
