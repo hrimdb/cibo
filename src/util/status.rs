@@ -1,5 +1,5 @@
-use std::str;
 use std::mem;
+use std::str;
 use util::coding::encode_fixed32;
 
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -7,12 +7,12 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
-use std::sync::Arc;
-use std::sync::atomic::{self, AtomicIsize};
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst};
+use std::sync::atomic::{self, AtomicIsize};
+use std::sync::Arc;
 
-use epoch::{Atomic, Owned};
 use crossbeam_deque::Deque;
+use epoch::{Atomic, Owned};
 use utils::cache_padded::CachePadded;
 /// Minimum buffer capacity for a MappingTable.
 const DEFAULT_MIN_CAP: usize = 2;

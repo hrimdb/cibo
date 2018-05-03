@@ -21,11 +21,11 @@ pub use self::imp::Lock;
 
 #[cfg(unix)]
 mod imp {
+    use libc;
     use std::ffi::{CString, OsStr};
+    use std::io;
     use std::os::unix::prelude::*;
     use std::path::Path;
-    use std::io;
-    use libc;
 
     #[cfg(any(target_os = "linux", target_os = "android"))]
     mod os {
@@ -71,10 +71,14 @@ mod imp {
         pub const F_SETLKW: libc::c_int = 13;
     }
 
-    #[cfg(any(target_os = "dragonfly",
-              target_os = "bitrig",
-              target_os = "netbsd",
-              target_os = "openbsd"))]
+    #[cfg(
+        any(
+            target_os = "dragonfly",
+            target_os = "bitrig",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    )]
     mod os {
         use libc;
 
@@ -170,11 +174,7 @@ mod imp {
     }
 
     impl Lock {
-        pub fn new(p: &Path,
-                   wait: bool,
-                   create: bool,
-                   exclusive: bool)
-                   -> io::Result<Lock> {
+        pub fn new(p: &Path, wait: bool, create: bool, exclusive: bool) -> io::Result<Lock> {
             let os: &OsStr = p.as_ref();
             let buf = CString::new(os.as_bytes()).unwrap();
             let open_flags = if create {
@@ -183,20 +183,13 @@ mod imp {
                 libc::O_RDWR
             };
 
-            let fd = unsafe {
-                libc::open(buf.as_ptr(), open_flags,
-                           libc::S_IRWXU as libc::c_int)
-            };
+            let fd = unsafe { libc::open(buf.as_ptr(), open_flags, libc::S_IRWXU as libc::c_int) };
 
             if fd < 0 {
                 return Err(io::Error::last_os_error());
             }
 
-            let lock_type = if exclusive {
-                os::F_WRLCK
-            } else {
-                os::F_RDLCK
-            };
+            let lock_type = if exclusive { os::F_WRLCK } else { os::F_RDLCK };
 
             let flock = os::flock {
                 l_start: 0,
@@ -207,12 +200,12 @@ mod imp {
                 l_sysid: 0,
             };
             let cmd = if wait { os::F_SETLKW } else { os::F_SETLK };
-            let ret = unsafe {
-                libc::fcntl(fd, cmd, &flock)
-            };
+            let ret = unsafe { libc::fcntl(fd, cmd, &flock) };
             if ret == -1 {
                 let err = io::Error::last_os_error();
-                unsafe { libc::close(fd); }
+                unsafe {
+                    libc::close(fd);
+                }
                 Err(err)
             } else {
                 Ok(Lock { fd: fd })
@@ -241,13 +234,13 @@ mod imp {
 #[cfg(windows)]
 #[allow(bad_style)]
 mod imp {
+    use std::fs::{File, OpenOptions};
     use std::io;
     use std::mem;
+    use std::os::raw::{c_int, c_ulong};
     use std::os::windows::prelude::*;
     use std::os::windows::raw::HANDLE;
     use std::path::Path;
-    use std::fs::{File, OpenOptions};
-    use std::os::raw::{c_ulong, c_int};
 
     type DWORD = c_ulong;
     type BOOL = c_int;
@@ -271,12 +264,14 @@ mod imp {
     }
 
     extern "system" {
-        fn LockFileEx(hFile: HANDLE,
-                      dwFlags: DWORD,
-                      dwReserved: DWORD,
-                      nNumberOfBytesToLockLow: DWORD,
-                      nNumberOfBytesToLockHigh: DWORD,
-                      lpOverlapped: LPOVERLAPPED) -> BOOL;
+        fn LockFileEx(
+            hFile: HANDLE,
+            dwFlags: DWORD,
+            dwReserved: DWORD,
+            nNumberOfBytesToLockLow: DWORD,
+            nNumberOfBytesToLockHigh: DWORD,
+            lpOverlapped: LPOVERLAPPED,
+        ) -> BOOL;
     }
 
     #[derive(Debug)]
@@ -285,24 +280,20 @@ mod imp {
     }
 
     impl Lock {
-        pub fn new(p: &Path,
-                   wait: bool,
-                   create: bool,
-                   exclusive: bool)
-                   -> io::Result<Lock> {
-            assert!(p.parent().unwrap().exists(),
+        pub fn new(p: &Path, wait: bool, create: bool, exclusive: bool) -> io::Result<Lock> {
+            assert!(
+                p.parent().unwrap().exists(),
                 "Parent directory of lock-file must exist: {}",
-                p.display());
+                p.display()
+            );
 
             let share_mode = FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE;
 
             let mut open_options = OpenOptions::new();
-            open_options.read(true)
-                        .share_mode(share_mode);
+            open_options.read(true).share_mode(share_mode);
 
             if create {
-                open_options.create(true)
-                            .write(true);
+                open_options.create(true).write(true);
             }
 
             debug!("Attempting to open lock file `{}`", p.display());
@@ -313,7 +304,7 @@ mod imp {
                 }
                 Err(err) => {
                     debug!("Error opening lock file: {}", err);
-                    return Err(err)
+                    return Err(err);
                 }
             };
 
@@ -329,14 +320,15 @@ mod imp {
                     dwFlags |= LOCKFILE_EXCLUSIVE_LOCK;
                 }
 
-                debug!("Attempting to acquire lock on lock file `{}`",
-                       p.display());
-                LockFileEx(file.as_raw_handle(),
-                           dwFlags,
-                           0,
-                           0xFFFF_FFFF,
-                           0xFFFF_FFFF,
-                           &mut overlapped)
+                debug!("Attempting to acquire lock on lock file `{}`", p.display());
+                LockFileEx(
+                    file.as_raw_handle(),
+                    dwFlags,
+                    0,
+                    0xFFFF_FFFF,
+                    0xFFFF_FFFF,
+                    &mut overlapped,
+                )
             };
             if ret == 0 {
                 let err = io::Error::last_os_error();
@@ -354,11 +346,7 @@ mod imp {
 }
 
 impl imp::Lock {
-    pub fn panicking_new(p: &Path,
-                         wait: bool,
-                         create: bool,
-                         exclusive: bool)
-                         -> Lock {
+    pub fn panicking_new(p: &Path, wait: bool, create: bool, exclusive: bool) -> Lock {
         Lock::new(p, wait, create, exclusive).unwrap_or_else(|err| {
             panic!("could not lock `{}`: {}", p.display(), err);
         })

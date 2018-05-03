@@ -1,3 +1,6 @@
+use env;
+use env::k_default_page_size;
+use env::{SequentialFile, WritableFile};
 use libc;
 use libc::c_int;
 use std::ffi::CString;
@@ -6,10 +9,7 @@ use std::os::raw::c_char;
 use std::ptr;
 use std::slice;
 use std::usize;
-use env;
-use env::k_default_page_size;
-use util::status::{Code,State};
-use env::{SequentialFile,WritableFile};
+use util::status::{Code, State};
 
 pub fn clearerr(stream: *mut libc::FILE) {
     extern "C" {

@@ -4,8 +4,8 @@
 #![feature(offset_to)]
 #[macro_use]
 pub mod maptable;
-pub mod util;
 pub mod env;
+pub mod util;
 extern crate alloc;
 extern crate crossbeam_deque;
 extern crate crossbeam_epoch as epoch;
