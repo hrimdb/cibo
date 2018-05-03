@@ -71,3 +71,53 @@ impl Default for EnvOptions {
         }
     }
 }
+
+pub trait WritableFile: Sized {
+    fn new(filename: String, reopen: bool, preallocation_block_size: usize) -> Self;
+    fn append(&mut self, data: Vec<u8>) -> state;
+    fn sync(&self) -> state;
+    fn close(&self) -> state;
+    fn flush(&self) -> state;
+    fn fcntl(&self) -> bool;
+    fn truncate(&mut self, size: usize) -> state;
+    fn get_required_buffer_alignment(&self) -> usize;
+
+    #[cfg(target_os = "linux")]
+    fn range_sync(&self, offset: i64, nbytes: i64) -> state;
+
+    #[cfg(not(target_os = "linux"))]
+    fn range_sync(&self, offset: i64, nbytes: i64) -> state {
+        return state::ok();
+    }
+
+    fn allocate(&self, offset: i64, len: i64) -> state {
+        return state::ok();
+    }
+
+    fn prepare_write(&mut self, offset: usize, len: usize) {}
+
+    fn positioned_append(&mut self, data: Vec<u8>, offset: usize) -> state {
+        return state::not_supported();
+    }
+
+    fn fsync(&self) -> state {
+        return self.sync();
+    }
+
+    fn get_file_size(&self) -> usize {
+        0
+    }
+
+    fn use_direct_io(&self) -> bool {
+        false
+    }
+}
+
+pub trait SequentialFile<RHS = Self>: Sized {
+    fn new(filename: String, options: env::EnvOptions, ptr: &mut RHS) -> state;
+    fn Skip(&self, n: i64) -> state;
+    fn Read(&mut self, n: usize, mut result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> state;
+    fn use_direct_io(&self) -> bool {
+        false
+    }
+}
