@@ -1,3 +1,8 @@
+use util::status::State;
+use env::env;
+
+pub const k_default_page_size: usize = 4 * 1024;
+
 #[derive(PartialEq)]
 pub enum WALRecoveryMode {
     // Original levelDB recovery
@@ -74,33 +79,33 @@ impl Default for EnvOptions {
 
 pub trait WritableFile: Sized {
     fn new(filename: String, reopen: bool, preallocation_block_size: usize) -> Self;
-    fn append(&mut self, data: Vec<u8>) -> state;
-    fn sync(&self) -> state;
-    fn close(&self) -> state;
-    fn flush(&self) -> state;
+    fn append(&mut self, data: Vec<u8>) -> State;
+    fn sync(&self) -> State;
+    fn close(&self) -> State;
+    fn flush(&self) -> State;
     fn fcntl(&self) -> bool;
-    fn truncate(&mut self, size: usize) -> state;
+    fn truncate(&mut self, size: usize) -> State;
     fn get_required_buffer_alignment(&self) -> usize;
 
     #[cfg(target_os = "linux")]
-    fn range_sync(&self, offset: i64, nbytes: i64) -> state;
+    fn range_sync(&self, offset: i64, nbytes: i64) -> State;
 
     #[cfg(not(target_os = "linux"))]
-    fn range_sync(&self, offset: i64, nbytes: i64) -> state {
-        return state::ok();
+    fn range_sync(&self, offset: i64, nbytes: i64) -> State {
+        return State::ok();
     }
 
-    fn allocate(&self, offset: i64, len: i64) -> state {
-        return state::ok();
+    fn allocate(&self, offset: i64, len: i64) -> State {
+        return State::ok();
     }
 
     fn prepare_write(&mut self, offset: usize, len: usize) {}
 
-    fn positioned_append(&mut self, data: Vec<u8>, offset: usize) -> state {
-        return state::not_supported();
+    fn positioned_append(&mut self, data: Vec<u8>, offset: usize) -> State {
+        return State::not_supported();
     }
 
-    fn fsync(&self) -> state {
+    fn fsync(&self) -> State {
         return self.sync();
     }
 
@@ -114,9 +119,9 @@ pub trait WritableFile: Sized {
 }
 
 pub trait SequentialFile<RHS = Self>: Sized {
-    fn new(filename: String, options: env::EnvOptions, ptr: &mut RHS) -> state;
-    fn Skip(&self, n: i64) -> state;
-    fn Read(&mut self, n: usize, mut result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> state;
+    fn new(filename: String, options: env::EnvOptions, ptr: &mut RHS) -> State;
+    fn Skip(&self, n: i64) -> State;
+    fn Read(&mut self, n: usize, mut result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> State;
     fn use_direct_io(&self) -> bool {
         false
     }
