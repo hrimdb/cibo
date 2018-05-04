@@ -328,13 +328,6 @@ impl WritableFile for PosixWritableFile {
     }
 }
 
-#[test]
-fn test_append() {
-    let mut p = PosixWritableFile::new(String::from("hello"), true, 20);
-    p.append(String::from("hello").into_bytes());
-    p.sync();
-}
-
 #[cfg(target_os = "macos")]
 fn get_flag_for_posix_sequential_file() -> i32 {
     0
