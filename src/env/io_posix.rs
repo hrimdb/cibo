@@ -30,7 +30,7 @@ unsafe fn fread_unlocked(
     return libc::fread(ptr, size, nobj, stream);
 }
 
-#[cfg(any(target_os = "linux"))]
+#[cfg(target_os = "linux")]
 extern "C" {
     fn posix_fread_unlocked(
         __ptr: *mut libc::c_void,
@@ -40,7 +40,7 @@ extern "C" {
     ) -> libc::size_t;
 }
 
-#[cfg(any(target_os = "linux"))]
+#[cfg(target_os = "linux")]
 unsafe fn fread_unlocked(
     ptr: *mut libc::c_void,
     size: libc::size_t,
