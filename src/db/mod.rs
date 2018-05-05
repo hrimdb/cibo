@@ -32,7 +32,6 @@ fn test_wal() {
         let input = vec![1, 2];
         wal.add_record(input);
     }
-    println!("test wal crc {:?}", crc32(0, &[1, 1, 2, 3]));
     {
         let mut pf: PosixSequentialFile = PosixSequentialFile::default();
         let mut op: EnvOptions = EnvOptions::default();
