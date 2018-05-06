@@ -21,7 +21,7 @@ pub fn clearerr(stream: *mut libc::FILE) {
 }
 
 #[cfg(any(target_os = "macos"))]
-unsafe fn fread_unlocked(
+unsafe fn posix_fread_unlocked(
     ptr: *mut libc::c_void,
     size: libc::size_t,
     nobj: libc::size_t,
@@ -30,9 +30,9 @@ unsafe fn fread_unlocked(
     return libc::fread(ptr, size, nobj, stream);
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux"))]
 extern "C" {
-    fn posix_fread_unlocked(
+    fn fread_unlocked(
         __ptr: *mut libc::c_void,
         __size: libc::size_t,
         __n: libc::size_t,
@@ -40,14 +40,14 @@ extern "C" {
     ) -> libc::size_t;
 }
 
-#[cfg(target_os = "linux")]
-unsafe fn fread_unlocked(
+#[cfg(any(target_os = "linux"))]
+unsafe fn posix_fread_unlocked(
     ptr: *mut libc::c_void,
     size: libc::size_t,
     nobj: libc::size_t,
     stream: *mut libc::FILE,
 ) -> libc::size_t {
-    return posix_fread_unlocked(ptr, size, nobj, stream);
+    return fread_unlocked(ptr, size, nobj, stream);
 }
 
 fn SetFD_CLOEXEC(fd: i32, options: env::EnvOptions) {
@@ -118,15 +118,8 @@ fn get_flag() -> i32 {
     libc::O_CREAT
 }
 
-#[cfg(
-    any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd"
-    )
-)]
+#[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd",
+          target_os = "linux", target_os = "netbsd"))]
 fn get_flag() -> i32 {
     libc::O_CREAT | libc::O_DIRECT
 }
@@ -333,15 +326,8 @@ fn get_flag_for_posix_sequential_file() -> i32 {
     0
 }
 
-#[cfg(
-    any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd"
-    )
-)]
+#[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd",
+          target_os = "linux", target_os = "netbsd"))]
 fn get_flag_for_posix_sequential_file() -> i32 {
     libc::O_DIRECT
 }
@@ -469,7 +455,7 @@ impl SequentialFile for PosixSequentialFile {
         let mut scratch: Vec<u8> = vec![0; n];
         unsafe {
             loop {
-                r = fread_unlocked(
+                r = posix_fread_unlocked(
                     scratch.as_mut_ptr() as *mut libc::c_void,
                     1 as libc::size_t,
                     n as libc::size_t,
