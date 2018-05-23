@@ -12,7 +12,7 @@ crossbeam-epoch = "0.4.1"
 crossbeam-utils = "0.3.2"
 crossbeam-deque = "0.3.0"
 gcc = "0.3.54"
-libc = "0.2.40"
+libc = "0.2.41"
 
 [dev-dependencies]
 rand = "0.4"
