@@ -12,7 +12,6 @@ use env::SequentialFile;
 use env::WritableFile;
 use util::file_reader_writer::SequentialFileReader;
 use util::file_reader_writer::WritableFileWriter;
-use util::hash::crc32;
 
 #[test]
 fn test_wal() {

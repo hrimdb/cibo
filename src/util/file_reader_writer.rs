@@ -52,9 +52,9 @@ impl<T: WritableFile> WritableFileWriter<T> {
             let fsize = self.get_file_size();
             self.writable_file_.prepare_write(fsize, left);
         }
-        if (self.buf_.get_capacity() - self.buf_.get_current_size() < left) {
+        if self.buf_.get_capacity() - self.buf_.get_current_size() < left {
             let mut cap = self.buf_.get_capacity();
-            while (cap < self.max_buffer_size_) {
+            while cap < self.max_buffer_size_ {
                 // See whether the next available size is large enough.
                 // Buffer will never be increased to more than max_buffer_size_.
                 let desired_capacity = min(cap * 2, self.max_buffer_size_);
@@ -73,7 +73,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
             && (self.buf_.get_capacity() - self.buf_.get_current_size() < left)
         {
             let s: State;
-            if (self.buf_.get_current_size() > 0) {
+            if self.buf_.get_current_size() > 0 {
                 s = self.flush();
                 if !s.is_ok() {
                     return s;
@@ -85,14 +85,14 @@ impl<T: WritableFile> WritableFileWriter<T> {
         // We never write directly to disk with direct I/O on.
         // or we simply use it for its original purpose to accumulate many small
         // chunks
-        if (self.writable_file_.use_direct_io() || self.buf_.get_capacity() >= left) {
-            while (left > 0) {
+        if self.writable_file_.use_direct_io() || self.buf_.get_capacity() >= left {
+            while left > 0 {
                 let appended = self.buf_.append(slice[src..].to_vec(), left);
                 left -= appended;
                 src += appended;
-                if (left > 0) {
+                if left > 0 {
                     s = self.flush();
-                    if (!s.is_ok()) {
+                    if !s.is_ok() {
                         break;
                     }
                 }
@@ -102,7 +102,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
             s = self.write_buffered(slice[src..].to_vec(), left);
         }
 
-        if (s.is_ok()) {
+        if s.is_ok() {
             self.filesize_ += slice.len();
         }
         State::ok()
@@ -114,8 +114,8 @@ impl<T: WritableFile> WritableFileWriter<T> {
 
     pub fn flush(&mut self) -> State {
         let mut s: State = State::new(Code::KCorruption, String::from(""), String::from(""));
-        if (self.buf_.get_current_size() > 0) {
-            if (self.writable_file_.use_direct_io()) {
+        if self.buf_.get_current_size() > 0 {
+            if self.writable_file_.use_direct_io() {
                 if cfg!(not(feature = "CIBO_LITE")) {
                     s = self.write_direct();
                 }
@@ -125,12 +125,12 @@ impl<T: WritableFile> WritableFileWriter<T> {
                 let read_result = self.buf_.read(buf_start, buf_len);
                 s = self.write_buffered(read_result, buf_len);
             }
-            if (!s.is_ok()) {
+            if !s.is_ok() {
                 return s;
             }
         }
         s = self.writable_file_.flush();
-        if (!s.is_ok()) {
+        if !s.is_ok() {
             return s;
         }
 
@@ -145,15 +145,15 @@ impl<T: WritableFile> WritableFileWriter<T> {
         //     the page.
         // Xfs does neighbor page flushing outside of the specified ranges. We
         // need to make sure sync range is far from the write offset.
-        if (!self.writable_file_.use_direct_io() && self.bytes_per_sync_ > 0) {
+        if !self.writable_file_.use_direct_io() && self.bytes_per_sync_ > 0 {
             let k_bytes_not_sync_range: usize = 1024 * 1024;
             let k_bytes_align_when_sync: usize = 4 * 1024;
-            if (self.filesize_ > k_bytes_not_sync_range) {
+            if self.filesize_ > k_bytes_not_sync_range {
                 let mut offset_sync_to = self.filesize_ - k_bytes_not_sync_range;
                 offset_sync_to -= offset_sync_to % k_bytes_align_when_sync;
                 assert!(offset_sync_to >= self.last_sync_size_);
-                if (offset_sync_to > 0
-                    && offset_sync_to - self.last_sync_size_ >= self.bytes_per_sync_)
+                if offset_sync_to > 0
+                    && offset_sync_to - self.last_sync_size_ >= self.bytes_per_sync_
                 {
                     let last_sync_size_ = self.last_sync_size_;
                     s = self.range_sync(
@@ -176,7 +176,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
         assert!(self.writable_file_.use_direct_io());
         let mut src = 0;
         let mut left = size;
-        while (left > 0) {
+        while left > 0 {
             let mut allowed;
 
             // if (rate_limiter_ != nullptr) {
@@ -187,7 +187,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
             allowed = left;
             // }
             s = self.writable_file_.append(data[src..src + left].to_vec());
-            if (!s.is_ok()) {
+            if !s.is_ok() {
                 return s;
             }
 
@@ -200,7 +200,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
 
     pub fn close(&mut self) -> State {
         let mut s: State = State::ok();
-        if (!self.writable_file_.fcntl()) {
+        if !self.writable_file_.fcntl() {
             s = State::new(
                 Code::KIOError,
                 "writeable_file_ has closed".to_string(),
@@ -211,12 +211,12 @@ impl<T: WritableFile> WritableFileWriter<T> {
 
         //s = self.flush();
         let mut interim: State;
-        if (self.writable_file_.use_direct_io()) {
+        if self.writable_file_.use_direct_io() {
             interim = self.writable_file_.truncate(self.filesize_);
-            if (interim.is_ok()) {
+            if interim.is_ok() {
                 interim = self.writable_file_.sync();
             }
-            if (!interim.is_ok() && s.is_ok()) {
+            if !interim.is_ok() && s.is_ok() {
                 s = interim;
             }
         }
@@ -238,15 +238,16 @@ impl<T: WritableFile> WritableFileWriter<T> {
         let mut write_offset = self.next_write_offset_;
         let mut left = self.buf_.get_current_size();
         unsafe {
-            while (left > 0) {
+            while left > 0 {
                 //rate_limiter
                 let mut size = left;
                 let mut write_context = vec![0; size];
                 write_context = self.buf_.read(src, size);
 
-                s = self.writable_file_
+                s = self
+                    .writable_file_
                     .positioned_append(write_context, write_offset);
-                if (!s.is_ok()) {
+                if !s.is_ok() {
                     self.buf_.size(file_advance + leftover_tail);
                     return s;
                 }
@@ -258,7 +259,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
                 assert!((self.next_write_offset_ % alignment) == 0);
             }
         }
-        if (s.is_ok()) {
+        if s.is_ok() {
             self.buf_.refit_tail(file_advance, leftover_tail);
             self.next_write_offset_ = file_advance;
         }

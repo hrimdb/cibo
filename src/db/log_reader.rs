@@ -76,7 +76,7 @@ impl Reader {
         let initial_offset_in_block = self.initial_offset_ % kBlockSize as u64;
         let mut block_start_location = self.initial_offset_ - initial_offset_in_block;
 
-        if (initial_offset_in_block > kBlockSize as u64 - 6) {
+        if initial_offset_in_block > kBlockSize as u64 - 6 {
             block_start_location += kBlockSize as u64;
         }
 
@@ -106,7 +106,7 @@ impl Reader {
         wal_recovery_mode: env::WALRecoveryMode,
     ) -> bool {
         if self.last_record_offset_ < self.initial_offset_ {
-            if !(self.SkipToInitialBlock()) {
+            if !self.SkipToInitialBlock() {
                 return false;
             }
         }
@@ -125,7 +125,7 @@ impl Reader {
             if record_type == log_format::RecordType::kFullType as isize
                 || record_type == log_format::RecordType::kRecyclableFullType as isize
             {
-                if (in_fragmented_record && !(scratch.len() == 0)) {
+                if in_fragmented_record && scratch.len() != 0 {
                     // Handle bug in earlier versions of log::Writer where
                     // it could emit an empty kFirstType record at the tail end
                     // of a block followed by a kFullType or kFirstType record
@@ -145,7 +145,7 @@ impl Reader {
             if record_type == log_format::RecordType::kFirstType as isize
                 || record_type == log_format::RecordType::kRecyclableFirstType as isize
             {
-                if (in_fragmented_record && !(scratch.len() == 0)) {
+                if in_fragmented_record && scratch.len() != 0 {
                     // Handle bug in earlier versions of log::Writer where
                     // it could emit an empty kFirstType record at the tail end
                     // of a block followed by a kFullType or kFirstType record
@@ -162,7 +162,7 @@ impl Reader {
             if record_type == log_format::RecordType::kMiddleType as isize
                 || record_type == log_format::RecordType::kRecyclableMiddleType as isize
             {
-                if (in_fragmented_record) {
+                if in_fragmented_record {
                     // Handle bug in earlier versions of log::Writer where
                     // it could emit an empty kFirstType record at the tail end
                     // of a block followed by a kFullType or kFirstType record
@@ -177,7 +177,7 @@ impl Reader {
             if record_type == log_format::RecordType::kLastType as isize
                 || record_type == log_format::RecordType::kRecyclableLastType as isize
             {
-                if (in_fragmented_record) {
+                if in_fragmented_record {
                     // Handle bug in earlier versions of log::Writer where
                     // it could emit an empty kFirstType record at the tail end
                     // of a block followed by a kFullType or kFirstType record
@@ -192,14 +192,14 @@ impl Reader {
                 break;
             }
             if record_type == RecordType::kBadHeader as isize {
-                if (wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency) {
+                if wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency {
                     // in clean shutdown we don't expect any error in the log files
                     //ReportCorruption(drop_size, "truncated header");
                 }
             }
             if record_type == RecordType::kEof as isize {
-                if (in_fragmented_record) {
-                    if (wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency) {
+                if in_fragmented_record {
+                    if wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency {
                         // in clean shutdown we don't expect any error in the log files
                         //ReportCorruption(drop_size, "truncated header");
                     }
@@ -208,11 +208,11 @@ impl Reader {
                 return false;
             }
             if record_type == RecordType::kOldRecord as isize {
-                if (wal_recovery_mode != env::WALRecoveryMode::kSkipAnyCorruptedRecords) {
+                if wal_recovery_mode != env::WALRecoveryMode::kSkipAnyCorruptedRecords {
                     // in clean shutdown we don't expect any error in the log files
                     //ReportCorruption(drop_size, "truncated header");
-                    if (in_fragmented_record) {
-                        if (wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency) {
+                    if in_fragmented_record {
+                        if wal_recovery_mode == env::WALRecoveryMode::kAbsoluteConsistency {
                             //ReportCorruption(drop_size, "truncated header");
                         }
                         scratch.clear();
@@ -221,7 +221,7 @@ impl Reader {
                 return false;
             }
             if record_type == RecordType::kBadRecord as isize {
-                if (in_fragmented_record) {
+                if in_fragmented_record {
                     //ReportCorruption(drop_size, "truncated header");
                     in_fragmented_record = false;
                     scratch.clear();
@@ -231,18 +231,18 @@ impl Reader {
             if record_type == RecordType::kBadRecordLen as isize
                 || record_type == RecordType::kBadRecordChecksum as isize
             {
-                if (self.recycled_
-                    && wal_recovery_mode == env::WALRecoveryMode::kTolerateCorruptedTailRecords)
+                if self.recycled_
+                    && wal_recovery_mode == env::WALRecoveryMode::kTolerateCorruptedTailRecords
                 {
                     scratch.clear();
                     return false;
                 }
-                if (record_type == RecordType::kBadRecordLen as isize) {
+                if record_type == RecordType::kBadRecordLen as isize {
                     //ReportCorruption(drop_size, "bad record length");
                 } else {
                     //ReportCorruption(drop_size, "checksum mismatch");
                 }
-                if (in_fragmented_record) {
+                if in_fragmented_record {
                     //ReportCorruption(scratch->size(), "error in middle of record");
                     in_fragmented_record = false;
                     scratch.clear();
@@ -261,11 +261,11 @@ impl Reader {
     }
 
     fn readPhysicalRecord(&mut self, mut result: &mut Vec<u8>, mut drop_size: &mut usize) -> isize {
-        while (true) {
+        loop {
             // We need at least the minimum header size
-            if (self.buffer_.len() < log_format::kHeaderSize) {
+            if self.buffer_.len() < log_format::kHeaderSize {
                 let mut r: isize = 0;
-                if (!self.readMore(&mut drop_size, &mut r)) {
+                if !self.readMore(&mut drop_size, &mut r) {
                     return r;
                 }
                 continue;
@@ -276,17 +276,17 @@ impl Reader {
             let log_type = self.buffer_[6];
             let length: usize = (a as usize) | ((b as usize) << 8);
             let mut header_size = log_format::kHeaderSize;
-            if (log_type >= log_format::RecordType::kRecyclableFullType as u8
-                && log_type <= log_format::RecordType::kRecyclableLastType as u8)
+            if log_type >= log_format::RecordType::kRecyclableFullType as u8
+                && log_type <= log_format::RecordType::kRecyclableLastType as u8
             {
-                if (self.end_of_buffer_offset_ - self.buffer_.len() as u64 == 0) {
+                if self.end_of_buffer_offset_ - self.buffer_.len() as u64 == 0 {
                     self.recycled_ = true;
                 }
                 header_size = log_format::kRecyclableHeaderSize;
                 // We need enough for the larger header
-                if (self.buffer_.len() < log_format::kRecyclableHeaderSize) {
+                if self.buffer_.len() < log_format::kRecyclableHeaderSize {
                     let mut r = 0;
-                    if (!self.readMore(&mut drop_size, &mut r)) {
+                    if !self.readMore(&mut drop_size, &mut r) {
                         return r;
                     }
                     continue;
@@ -297,26 +297,26 @@ impl Reader {
                     self.buffer_[9],
                     self.buffer_[10],
                 ]);
-                if (log_num != self.log_number_) {
+                if log_num != self.log_number_ {
                     return RecordType::kOldRecord as isize;
                 }
             }
-            if (header_size + length > self.buffer_.len()) {
+            if header_size + length > self.buffer_.len() {
                 *drop_size = self.buffer_.len();
                 self.buffer_.clear();
-                if (!self.eof_) {
+                if !self.eof_ {
                     return RecordType::kBadRecordLen as isize;
                 }
                 // If the end of the file has been reached without reading |length| bytes
                 // of payload, assume the writer died in the middle of writing the record.
                 // Don't report a corruption unless requested.
-                if (*drop_size > 0) {
+                if *drop_size > 0 {
                     return RecordType::kBadHeader as isize;
                 }
                 return RecordType::kEof as isize;
             }
 
-            if (log_type == log_format::RecordType::kZeroType as u8 && length == 0) {
+            if log_type == log_format::RecordType::kZeroType as u8 && length == 0 {
                 // Skip zero length record without reporting any drops since
                 // such records are produced by the mmap based writing code in
                 // env_posix.cc that preallocates file regions.
@@ -326,7 +326,7 @@ impl Reader {
                 return RecordType::kBadRecord as isize;
             }
 
-            if (self.checksum_) {
+            if self.checksum_ {
                 let expected_crc = decode_fixed32([
                     self.buffer_[0],
                     self.buffer_[1],
@@ -334,7 +334,7 @@ impl Reader {
                     self.buffer_[3],
                 ]);
                 let actual_crc = crc32(0, &self.buffer_[6..length + header_size]); //?
-                if (actual_crc != expected_crc) {
+                if actual_crc != expected_crc {
                     // Drop the rest of the buffer since "length" itself may have
                     // been corrupted and if we trust it, we could find some
                     // fragment of a real log record that just happens to look
@@ -345,13 +345,16 @@ impl Reader {
                 }
             }
             //todo: remove unwrap
-            result.append(&mut self.buffer_
+            result.append(&mut self
+                .buffer_
                 .get(header_size..header_size + length)
                 .unwrap()
                 .to_vec());
             self.buffer_ = self.buffer_[header_size + length..].to_vec();
-            if ((self.end_of_buffer_offset_ - self.buffer_.len() as u64 - header_size as u64
-                - length as u64) < self.initial_offset_)
+            if (self.end_of_buffer_offset_
+                - self.buffer_.len() as u64
+                - header_size as u64
+                - length as u64) < self.initial_offset_
             {
                 result.clear();
                 return RecordType::kBadHeader as isize;
@@ -362,7 +365,7 @@ impl Reader {
     }
 
     fn readMore(&mut self, mut drop_size: &mut usize, mut error: &mut isize) -> bool {
-        if (!self.eof_ && !self.read_error_) {
+        if !self.eof_ && !self.read_error_ {
             self.buffer_.clear();
             let s = self.file_.Read(
                 log_format::kBlockSize,
@@ -370,7 +373,7 @@ impl Reader {
                 &mut self.backing_store_,
             );
             self.end_of_buffer_offset_ += self.buffer_.len() as u64;
-            if (!s.is_ok()) {
+            if !s.is_ok() {
                 self.buffer_.clear();
                 //ReportDrop(kBlockSize, status);
                 self.read_error_ = true;
@@ -384,7 +387,7 @@ impl Reader {
             }
             return true;
         } else {
-            if (self.buffer_.len() > 0) {
+            if self.buffer_.len() > 0 {
                 *drop_size = self.buffer_.len();
                 self.buffer_.clear();
                 *error = RecordType::kBadHeader as isize;

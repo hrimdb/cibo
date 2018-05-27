@@ -1,6 +1,5 @@
 use db::log_format::{kBlockSize, kHeaderSize, kMaxRecordType, kRecyclableHeaderSize, RecordType};
 use env::WritableFile;
-use std::mem;
 use util::coding::{encode_fixed32, encode_fixed64};
 use util::file_reader_writer::WritableFileWriter;
 use util::hash::crc32;
@@ -61,15 +60,15 @@ impl<T: WritableFile> Writer<T> {
             let leftover: usize = kBlockSize - self.block_offset_;
             assert!(leftover >= 0);
 
-            if (leftover < header_size) {
-                if (leftover > 0) {
+            if leftover < header_size {
+                if leftover > 0 {
                     assert!(header_size <= 11);
                     let s = self.dest_.append(
                         vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
                             [..leftover]
                             .to_vec(),
                     );
-                    if (!s.is_ok()) {
+                    if !s.is_ok() {
                         break;
                     }
                 }
@@ -81,19 +80,19 @@ impl<T: WritableFile> Writer<T> {
 
             let end: bool = (left == fragment_length);
             let rtype: RecordType;
-            if (begin && end) {
+            if begin && end {
                 rtype = if self.recycle_log_files_ {
                     RecordType::kRecyclableFullType
                 } else {
                     RecordType::kFullType
                 };
-            } else if (begin) {
+            } else if begin {
                 rtype = if self.recycle_log_files_ {
                     RecordType::kRecyclableFirstType
                 } else {
                     RecordType::kFirstType
                 };
-            } else if (end) {
+            } else if end {
                 rtype = if self.recycle_log_files_ {
                     RecordType::kRecyclableLastType
                 } else {
@@ -126,7 +125,7 @@ impl<T: WritableFile> Writer<T> {
         buf[5] = (n >> 8) as u8;
         buf[6] = t as u8;
 
-        if ((t as u8) < RecordType::kRecyclableFullType as u8) {
+        if (t as u8) < RecordType::kRecyclableFullType as u8 {
             header_size = kHeaderSize;
         } else {
             header_size = kRecyclableHeaderSize;

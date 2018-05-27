@@ -4,10 +4,7 @@ use env::{SequentialFile, WritableFile};
 use libc;
 use libc::c_int;
 use std::ffi::CString;
-use std::mem;
 use std::os::raw::c_char;
-use std::ptr;
-use std::slice;
 use std::usize;
 use util::status::{Code, State};
 
@@ -41,7 +38,7 @@ unsafe fn posix_fread_unlocked(
 }
 
 fn SetFD_CLOEXEC(fd: i32, options: env::EnvOptions) {
-    if (options.set_fd_cloexec && fd > 0) {
+    if options.set_fd_cloexec && fd > 0 {
         unsafe {
             libc::fcntl(
                 fd,
@@ -229,12 +226,12 @@ impl WritableFile for PosixWritableFile {
 
     #[cfg(target_os = "linux")]
     fn prepare_write(&mut self, offset: usize, len: usize) {
-        if (self.preallocation_block_size_ == 0) {
+        if self.preallocation_block_size_ == 0 {
             return;
         }
         let block_size = self.preallocation_block_size_;
         let new_last_preallocated_block = (offset + len + block_size - 1) / block_size;
-        if (new_last_preallocated_block > self.last_preallocated_block_) {
+        if new_last_preallocated_block > self.last_preallocated_block_ {
             let num_spanned_blocks = new_last_preallocated_block - self.last_preallocated_block_;
             self.allocate(
                 (block_size * self.last_preallocated_block_) as i64,
@@ -278,7 +275,7 @@ impl WritableFile for PosixWritableFile {
     }
 
     fn positioned_append(&mut self, mut data: Vec<u8>, mut offset: usize) -> State {
-        if (self.use_direct_io()) {
+        if self.use_direct_io() {
             //println!("offset {} get_logical_buffer_size {}",offset,get_logical_buffer_size());
             //assert!(IsSectorAligned(offset, get_logical_buffer_size()));
             //println!("data len {} get_logical_buffer_size {}",data.len(),get_logical_buffer_size());
@@ -290,13 +287,13 @@ impl WritableFile for PosixWritableFile {
         let mut left = data.len();
 
         let mut done;
-        while (left != 0) {
+        while left != 0 {
             unsafe {
                 done = libc::pwrite(self.fd_, src as *const libc::c_void, left, offset as i64);
             }
             if done < 1 {
                 unsafe {
-                    if (*errno_location()) as i32 == libc::EINTR {
+                    if *errno_location() as i32 == libc::EINTR {
                         continue;
                     }
                 }
@@ -362,7 +359,7 @@ impl SequentialFile for PosixSequentialFile {
         let mut fd = -1;
         let mut flag = libc::O_RDONLY;
         let mut file = 0 as *mut libc::FILE;
-        if (options.use_direct_reads && !options.use_mmap_reads) {
+        if options.use_direct_reads && !options.use_mmap_reads {
             if cfg!(feature = "CIBO_LITE") {
                 return State::new(
                     Code::KIOError,
@@ -395,10 +392,10 @@ impl SequentialFile for PosixSequentialFile {
         }
 
         SetFD_CLOEXEC(fd, options.clone());
-        if (options.use_direct_reads && !options.use_mmap_reads) {
+        if options.use_direct_reads && !options.use_mmap_reads {
             #[cfg(target_os = "macos")]
             unsafe {
-                if (libc::fcntl(fd, libc::F_NOCACHE, 1) == -1) {
+                if libc::fcntl(fd, libc::F_NOCACHE, 1) == -1 {
                     libc::close(fd);
                     println!("While fcntl NoCache");
                     return State::new(
@@ -441,7 +438,7 @@ impl SequentialFile for PosixSequentialFile {
 
     fn Skip(&self, n: i64) -> State {
         unsafe {
-            if (libc::fseek(self.file_, n, libc::SEEK_CUR) > 0) {
+            if libc::fseek(self.file_, n, libc::SEEK_CUR) > 0 {
                 // return IOError("While fseek to skip " + ToString(n) + " bytes", filename_, errno);
                 return State::new(
                     Code::KIOError,
@@ -479,7 +476,7 @@ impl SequentialFile for PosixSequentialFile {
             println!("fread size {}", r);
             result.split_off(r);
 
-            if (r < n) {
+            if r < n {
                 println!("feof {}", libc::feof(self.file_));
                 if libc::feof(self.file_) == 0 {
                     s = State::new(
