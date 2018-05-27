@@ -31,23 +31,13 @@ unsafe fn posix_fread_unlocked(
 }
 
 #[cfg(any(target_os = "linux"))]
-extern "C" {
-    fn fread_unlocked(
-        __ptr: *mut libc::c_void,
-        __size: libc::size_t,
-        __n: libc::size_t,
-        __stream: *mut libc::FILE,
-    ) -> libc::size_t;
-}
-
-#[cfg(any(target_os = "linux"))]
 unsafe fn posix_fread_unlocked(
     ptr: *mut libc::c_void,
     size: libc::size_t,
     nobj: libc::size_t,
     stream: *mut libc::FILE,
 ) -> libc::size_t {
-    return fread_unlocked(ptr, size, nobj, stream);
+    return libc::fread_unlocked(ptr, size, nobj, stream);
 }
 
 fn SetFD_CLOEXEC(fd: i32, options: env::EnvOptions) {
@@ -118,8 +108,15 @@ fn get_flag() -> i32 {
     libc::O_CREAT
 }
 
-#[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd",
-          target_os = "linux", target_os = "netbsd"))]
+#[cfg(
+    any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd"
+    )
+)]
 fn get_flag() -> i32 {
     libc::O_CREAT | libc::O_DIRECT
 }
@@ -326,8 +323,15 @@ fn get_flag_for_posix_sequential_file() -> i32 {
     0
 }
 
-#[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd",
-          target_os = "linux", target_os = "netbsd"))]
+#[cfg(
+    any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd"
+    )
+)]
 fn get_flag_for_posix_sequential_file() -> i32 {
     libc::O_DIRECT
 }
@@ -462,7 +466,8 @@ impl SequentialFile for PosixSequentialFile {
                     self.file_,
                 );
 
-                if !(libc::ferror(self.file_) > 0 && ((*errno_location()) as i32 == libc::EINTR)
+                if !(libc::ferror(self.file_) > 0
+                    && ((*errno_location()) as i32 == libc::EINTR)
                     && r == 0)
                 {
                     break;
