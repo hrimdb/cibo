@@ -1,7 +1,6 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #![feature(alloc)]
-#![feature(align_offset)]
 #![feature(offset_to)]
 #![feature(raw_vec_internals)]
 #[macro_use]
