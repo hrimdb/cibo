@@ -3,6 +3,7 @@
 #![feature(alloc)]
 #![feature(align_offset)]
 #![feature(offset_to)]
+#![feature(raw_vec_internals)]
 #[macro_use]
 pub mod maptable;
 pub mod db;
