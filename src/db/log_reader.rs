@@ -83,7 +83,7 @@ impl Reader {
         self.end_of_buffer_offset_ = block_start_location;
 
         if block_start_location > 0 {
-            let skip_status = self.file_.Skip(block_start_location as i64);
+            let skip_status = self.file_.skip(block_start_location as i64);
             if skip_status.is_ok() {
                 //ReportDrop(static_cast<size_t>(block_start_location), skip_status);
                 return false;
@@ -345,11 +345,13 @@ impl Reader {
                 }
             }
             //todo: remove unwrap
-            result.append(&mut self
-                .buffer_
-                .get(header_size..header_size + length)
-                .unwrap()
-                .to_vec());
+            result.append(
+                &mut self
+                    .buffer_
+                    .get(header_size..header_size + length)
+                    .unwrap()
+                    .to_vec(),
+            );
             self.buffer_ = self.buffer_[header_size + length..].to_vec();
             if (self.end_of_buffer_offset_
                 - self.buffer_.len() as u64
@@ -367,7 +369,7 @@ impl Reader {
     fn readMore(&mut self, mut drop_size: &mut usize, mut error: &mut isize) -> bool {
         if !self.eof_ && !self.read_error_ {
             self.buffer_.clear();
-            let s = self.file_.Read(
+            let s = self.file_.read(
                 log_format::kBlockSize,
                 &mut self.buffer_,
                 &mut self.backing_store_,

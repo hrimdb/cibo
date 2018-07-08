@@ -436,7 +436,7 @@ impl SequentialFile for PosixSequentialFile {
         return State::ok();
     }
 
-    fn Skip(&self, n: i64) -> State {
+    fn skip(&self, n: i64) -> State {
         unsafe {
             if libc::fseek(self.file_, n, libc::SEEK_CUR) > 0 {
                 // return IOError("While fseek to skip " + ToString(n) + " bytes", filename_, errno);
@@ -450,7 +450,7 @@ impl SequentialFile for PosixSequentialFile {
         }
     }
 
-    fn Read(&mut self, n: usize, mut result: &mut Vec<u8>, mut scratch: &mut Vec<u8>) -> State {
+    fn read(&mut self, n: usize, mut result: &mut Vec<u8>, mut scratch: &mut Vec<u8>) -> State {
         let mut s: State = State::ok();
         let mut r = 0;
         let mut scratch: Vec<u8> = vec![0; n];
