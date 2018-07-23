@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use crossbeam_deque::Deque;
 use epoch::{Atomic, Owned};
-use utils::cache_padded::CachePadded;
+use utils::CachePadded;
 /// Minimum buffer capacity for a MappingTable.
 const DEFAULT_MIN_CAP: usize = 2;
 
@@ -124,7 +124,8 @@ impl<T> Inner<T> {
         let guard = &epoch::pin();
 
         // Replace the old buffer with the new one.
-        let old = self.buffer
+        let old = self
+            .buffer
             .swap(Owned::new(new).into_shared(guard), Release, guard);
 
         // Destroy the old buffer later.
@@ -163,7 +164,7 @@ impl<T> Drop for Inner<T> {
 pub struct MappingTable<T> {
     inner: Arc<CachePadded<Inner<T>>>,
     empty: Deque<isize>,
-    _marker: PhantomData<*mut ()>, // !Send + !Sync
+    _marker: PhantomData<*mut T>, // !Send + !Sync
 }
 
 unsafe impl<T: Send> Send for MappingTable<T> {}
