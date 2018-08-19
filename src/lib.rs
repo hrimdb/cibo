@@ -1,7 +1,7 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #![feature(alloc)]
-#![feature(offset_to)]
+#![feature(ptr_offset_from)]
 #![feature(raw_vec_internals)]
 #[macro_use]
 pub mod maptable;

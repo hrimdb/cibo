@@ -103,12 +103,15 @@ impl AlignedBuffer {
     pub fn read(&mut self, offset: *mut u8, read_size: usize) -> Vec<u8> {
         let mut result = vec![0; read_size];
         let mut to_read = 0;
-        if self.buf_.ptr().offset_to(offset).unwrap() < self.cursize_ as isize {
-            to_read = min(
-                self.cursize_ - self.buf_.ptr().offset_to(offset).unwrap() as usize,
-                read_size,
-            );
+        unsafe {
+            if offset.offset_from(self.buf_.ptr()) < self.cursize_ as isize {
+                to_read = min(
+                    self.cursize_ - offset.offset_from(self.buf_.ptr()) as usize,
+                    read_size,
+                );
+            }
         }
+
         if to_read > 0 {
             unsafe {
                 ptr::copy_nonoverlapping(offset, result.as_mut_ptr(), to_read);
