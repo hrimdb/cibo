@@ -356,7 +356,8 @@ impl Reader {
             if (self.end_of_buffer_offset_
                 - self.buffer_.len() as u64
                 - header_size as u64
-                - length as u64) < self.initial_offset_
+                - length as u64)
+                < self.initial_offset_
             {
                 result.clear();
                 return RecordType::kBadHeader as isize;
