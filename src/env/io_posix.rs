@@ -1,12 +1,11 @@
-use env;
-use env::k_default_page_size;
-use env::{SequentialFile, WritableFile};
-use libc;
+use crate::env;
+use crate::env::k_default_page_size;
+use crate::env::{SequentialFile, WritableFile};
+use crate::util::status::{Code, State};
 use libc::c_int;
 use std::ffi::CString;
 use std::os::raw::c_char;
 use std::usize;
-use util::status::{Code, State};
 
 pub fn clearerr(stream: *mut libc::FILE) {
     extern "C" {
@@ -105,15 +104,13 @@ fn get_flag() -> i32 {
     libc::O_CREAT
 }
 
-#[cfg(
-    any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd"
-    )
-)]
+#[cfg(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "linux",
+    target_os = "netbsd"
+))]
 fn get_flag() -> i32 {
     libc::O_CREAT | libc::O_DIRECT
 }
@@ -320,15 +317,13 @@ fn get_flag_for_posix_sequential_file() -> i32 {
     0
 }
 
-#[cfg(
-    any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd"
-    )
-)]
+#[cfg(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "linux",
+    target_os = "netbsd"
+))]
 fn get_flag_for_posix_sequential_file() -> i32 {
     libc::O_DIRECT
 }
@@ -355,7 +350,7 @@ impl Default for PosixSequentialFile {
 }
 
 impl SequentialFile for PosixSequentialFile {
-    fn new(filename: String, options: env::EnvOptions, mut ptr: &mut PosixSequentialFile) -> State {
+    fn new(filename: String, options: env::EnvOptions, ptr: &mut PosixSequentialFile) -> State {
         let mut fd = -1;
         let mut flag = libc::O_RDONLY;
         let mut file = 0 as *mut libc::FILE;
@@ -450,7 +445,7 @@ impl SequentialFile for PosixSequentialFile {
         }
     }
 
-    fn read(&mut self, n: usize, mut result: &mut Vec<u8>, mut scratch: &mut Vec<u8>) -> State {
+    fn read(&mut self, n: usize, result: &mut Vec<u8>, _scratch: &mut Vec<u8>) -> State {
         let mut s: State = State::ok();
         let mut r = 0;
         let mut scratch: Vec<u8> = vec![0; n];

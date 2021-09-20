@@ -2,17 +2,16 @@
 name = "cibo"
 version = "0.1.0"
 authors = ["hawkingrei <hawking.rei@gmail.com>"]
+edition = "2018"
 
 [profile.release]
 opt-level = 3
 
 [dependencies]
 clippy = { version = "*", optional = true }
-crossbeam-epoch = "0.5.2"
-crossbeam-utils = "0.5.0"
-crossbeam-deque = "0.3.0"
+crossbeam = "0.8"
 gcc = "0.3.54"
-libc = "0.2.43"
+libc = "0.2"
 
 [dev-dependencies]
 rand = "0.4"

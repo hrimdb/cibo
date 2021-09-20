@@ -1,12 +1,11 @@
-use util::hash::crc32;
-
-use db::log_format;
-use db::log_format::kBlockSize;
-use db::log_format::kMaxRecordType;
-use env;
-use env::io_posix::PosixSequentialFile;
-use util::coding::decode_fixed32;
-use util::file_reader_writer::SequentialFileReader;
+use crate::db::log_format;
+use crate::db::log_format::kBlockSize;
+use crate::db::log_format::kMaxRecordType;
+use crate::env;
+use crate::env::io_posix::PosixSequentialFile;
+use crate::util::coding::decode_fixed32;
+use crate::util::file_reader_writer::SequentialFileReader;
+use crate::util::hash::crc32;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum RecordType {
@@ -101,8 +100,8 @@ impl Reader {
     // restrict the inconsistency to only the last log
     pub fn readRecord(
         &mut self,
-        mut record: &mut Vec<u8>,
-        mut scratch: &mut Vec<u8>,
+        record: &mut Vec<u8>,
+        scratch: &mut Vec<u8>,
         wal_recovery_mode: env::WALRecoveryMode,
     ) -> bool {
         if self.last_record_offset_ < self.initial_offset_ {
@@ -119,7 +118,7 @@ impl Reader {
 
         let mut fragment: Vec<u8> = Vec::new();
         loop {
-            let mut physical_record_offset = self.end_of_buffer_offset_ - self.buffer_.len() as u64;
+            let physical_record_offset = self.end_of_buffer_offset_ - self.buffer_.len() as u64;
             let mut drop_size: usize = 0;
             let record_type = self.readPhysicalRecord(&mut fragment, &mut drop_size);
             if record_type == log_format::RecordType::kFullType as isize
@@ -260,7 +259,7 @@ impl Reader {
         return false;
     }
 
-    fn readPhysicalRecord(&mut self, mut result: &mut Vec<u8>, mut drop_size: &mut usize) -> isize {
+    fn readPhysicalRecord(&mut self, result: &mut Vec<u8>, mut drop_size: &mut usize) -> isize {
         loop {
             // We need at least the minimum header size
             if self.buffer_.len() < log_format::kHeaderSize {
@@ -367,7 +366,7 @@ impl Reader {
         return 0;
     }
 
-    fn readMore(&mut self, mut drop_size: &mut usize, mut error: &mut isize) -> bool {
+    fn readMore(&mut self, drop_size: &mut usize, error: &mut isize) -> bool {
         if !self.eof_ && !self.read_error_ {
             self.buffer_.clear();
             let s = self.file_.read(

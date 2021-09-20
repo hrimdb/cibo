@@ -1,12 +1,12 @@
-use env::io_posix;
-use env::EnvOptions;
-use env::{SequentialFile, WritableFile};
+
+use crate::env::EnvOptions;
+use crate::env::{SequentialFile, WritableFile};
+use crate::util::aligned_buffer::truncate_to_page_boundary;
+use crate::util::aligned_buffer::AlignedBuffer;
+use crate::util::status::Code;
+use crate::util::status::State;
 use std::cmp::min;
 use std::sync::atomic::AtomicIsize;
-use util::aligned_buffer::truncate_to_page_boundary;
-use util::aligned_buffer::AlignedBuffer;
-use util::status::Code;
-use util::status::State;
 
 #[derive(Debug)]
 pub struct WritableFileWriter<T: WritableFile> {
@@ -45,7 +45,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
     pub fn append(&mut self, slice: Vec<u8>) -> State {
         let mut s: State = State::ok();
         let mut src = 0;
-        let mut ptr = slice.as_slice();
+        let _ptr = slice.as_slice();
         let mut left = slice.len();
         self.pending_sync_ = true;
         {
@@ -177,7 +177,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
         let mut src = 0;
         let mut left = size;
         while left > 0 {
-            let mut allowed;
+            let allowed;
 
             // if (rate_limiter_ != nullptr) {
             // allowed = rate_limiter_->RequestToken(
@@ -234,13 +234,13 @@ impl<T: WritableFile> WritableFileWriter<T> {
         let leftover_tail = self.buf_.get_current_size() - file_advance;
         self.buf_.pad_to_aligment_with(0);
 
-        let mut src = self.buf_.buffer_start();
+        let src = self.buf_.buffer_start();
         let mut write_offset = self.next_write_offset_;
         let mut left = self.buf_.get_current_size();
         unsafe {
             while left > 0 {
                 //rate_limiter
-                let mut size = left;
+                let size = left;
                 let mut write_context = vec![0; size];
                 write_context = self.buf_.read(src, size);
 
@@ -253,7 +253,7 @@ impl<T: WritableFile> WritableFileWriter<T> {
                 }
                 left -= size;
 
-                let mut src = src.offset(size as isize);
+                let _src = src.offset(size as isize);
 
                 write_offset += size;
                 assert!((self.next_write_offset_ % alignment) == 0);
@@ -292,7 +292,7 @@ impl<T: SequentialFile> SequentialFileReader<T> {
         self.file_.skip(n)
     }
 
-    pub fn read(&mut self, n: usize, mut result: &mut Vec<u8>, mut scratch: &mut Vec<u8>) -> State {
+    pub fn read(&mut self, n: usize, result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> State {
         self.file_.read(n, result, scratch)
     }
 }
