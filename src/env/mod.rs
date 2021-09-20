@@ -1,6 +1,7 @@
 pub mod io_posix;
-use env;
-use util::status::State;
+
+use crate::env;
+use crate::util::status::State;
 
 pub const k_default_page_size: usize = 4 * 1024;
 
@@ -92,17 +93,17 @@ pub trait WritableFile: Sized {
     fn range_sync(&self, offset: i64, nbytes: i64) -> State;
 
     #[cfg(not(target_os = "linux"))]
-    fn range_sync(&self, offset: i64, nbytes: i64) -> State {
+    fn range_sync(&self, _offset: i64, _nbytes: i64) -> State {
         return State::ok();
     }
 
-    fn allocate(&self, offset: i64, len: i64) -> State {
+    fn allocate(&self, _offset: i64, _len: i64) -> State {
         return State::ok();
     }
 
-    fn prepare_write(&mut self, offset: usize, len: usize) {}
+    fn prepare_write(&mut self, _offset: usize, _len: usize) {}
 
-    fn positioned_append(&mut self, data: Vec<u8>, offset: usize) -> State {
+    fn positioned_append(&mut self, _data: Vec<u8>, _offset: usize) -> State {
         return State::not_supported();
     }
 
@@ -122,7 +123,7 @@ pub trait WritableFile: Sized {
 pub trait SequentialFile<RHS = Self>: Sized {
     fn new(filename: String, options: env::EnvOptions, ptr: &mut RHS) -> State;
     fn skip(&self, n: i64) -> State;
-    fn read(&mut self, n: usize, mut result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> State;
+    fn read(&mut self, n: usize, result: &mut Vec<u8>, scratch: &mut Vec<u8>) -> State;
     fn use_direct_io(&self) -> bool {
         false
     }

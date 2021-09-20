@@ -1,9 +1,11 @@
-use db::log_format::{kBlockSize, kHeaderSize, kMaxRecordType, kRecyclableHeaderSize, RecordType};
-use env::WritableFile;
-use util::coding::{encode_fixed32, encode_fixed64};
-use util::file_reader_writer::WritableFileWriter;
-use util::hash::crc32;
-use util::status::State;
+use crate::db::log_format::{
+    kBlockSize, kHeaderSize, kMaxRecordType, kRecyclableHeaderSize, RecordType,
+};
+use crate::env::WritableFile;
+use crate::util::coding::{encode_fixed32, encode_fixed64};
+use crate::util::file_reader_writer::WritableFileWriter;
+use crate::util::hash::crc32;
+use crate::util::status::State;
 
 #[derive(Debug)]
 pub struct Writer<T: WritableFile> {
@@ -78,7 +80,7 @@ impl<T: WritableFile> Writer<T> {
             let avail: usize = kBlockSize - self.block_offset_ - header_size;
             fragment_length = if left < avail { left } else { avail };
 
-            let end: bool = (left == fragment_length);
+            let end: bool = left == fragment_length;
             let rtype: RecordType;
             if begin && end {
                 rtype = if self.recycle_log_files_ {

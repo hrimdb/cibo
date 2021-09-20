@@ -1,4 +1,3 @@
-use alloc::raw_vec::RawVec;
 use std::cmp::min;
 use std::fmt::{self, Debug, Formatter};
 use std::{ptr, slice};
@@ -20,7 +19,7 @@ fn round_down(x: usize, y: usize) -> usize {
 
 pub struct AlignedBuffer {
     alignment_: usize,
-    buf_: RawVec<u8>,
+    buf_: Vec<u8>,
     capacity_: usize,
     cursize_: usize,
     bufstart_: *mut u8,
@@ -30,7 +29,7 @@ impl Default for AlignedBuffer {
     fn default() -> Self {
         AlignedBuffer {
             alignment_: 4 * 1024,
-            buf_: RawVec::with_capacity(1),
+            buf_: Vec::with_capacity(1),
             capacity_: 1,
             cursize_: 0,
             bufstart_: ptr::null_mut::<u8>(),
@@ -65,20 +64,20 @@ impl AlignedBuffer {
         }
 
         let new_capacity = round_up(requested_cacacity, self.alignment_);
-        let new_buf = RawVec::with_capacity_zeroed(new_capacity + 1);
+        let mut new_buf: Vec<u8> = vec![0; new_capacity + 1];
         //let new_bufstart_offset = self.buf_.ptr().align_offset(self.alignment_);
         //let new_bufstart;
         unsafe {
             //new_bufstart = self.buf_.ptr().offset(new_bufstart_offset as isize);
             if copy_data {
                 //ptr::write()
-                ptr::copy_nonoverlapping(new_buf.ptr(), self.bufstart_, self.cursize_);
+                ptr::copy_nonoverlapping(new_buf.as_ptr(), self.bufstart_, self.cursize_);
             } else {
                 self.cursize_ = 0;
             }
         }
 
-        self.bufstart_ = new_buf.ptr();
+        self.bufstart_ = new_buf.as_mut_ptr();
         self.capacity_ = new_capacity;
         self.buf_ = new_buf;
     }
@@ -104,9 +103,9 @@ impl AlignedBuffer {
         let mut result = vec![0; read_size];
         let mut to_read = 0;
         unsafe {
-            if offset.offset_from(self.buf_.ptr()) < self.cursize_ as isize {
+            if offset.offset_from(self.buf_.as_ptr()) < self.cursize_ as isize {
                 to_read = min(
-                    self.cursize_ - offset.offset_from(self.buf_.ptr()) as usize,
+                    self.cursize_ - offset.offset_from(self.buf_.as_ptr()) as usize,
                     read_size,
                 );
             }
@@ -182,9 +181,9 @@ impl Debug for AlignedBuffer {
             f,
             "AlignedBuffer[alignment: {}, start: {:?},align start: {:?}, buf: {}]",
             self.alignment_,
-            self.buf_.ptr(),
+            self.buf_.as_ptr(),
             self.bufstart_,
-            escape(unsafe { slice::from_raw_parts(self.buf_.ptr(), self.buf_.cap()) })
+            escape(unsafe { slice::from_raw_parts(self.buf_.as_ptr(), self.buf_.len()) })
         )
     }
 }
